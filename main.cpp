@@ -8,6 +8,7 @@
  * Test list:
  * 1. write/read register 1-4
  * 2. write/read register 0
+ * 3. write to register 0-4 and read all the other.
  */
 
 #include "mbed.h"
@@ -31,6 +32,7 @@ struct test {
 #define TEST_WRITE_READ_REG_1_4_RANDOM          (1)
 #define TEST_WRITE_READ_REG_0_COUNT             (10)
 #define TEST_WRITE_READ_REG_0_RANDOM            (1)
+#define TEST_WRITE_REG_READ_ALL_COUNT           (500)
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -134,6 +136,47 @@ static bool test_write_read_reg_0(void)
 }
 
 /**
+ * @brief Check that a write to one register does not affect other registers
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_reg_read_all(void)
+{
+    char regs[5] = {0, 0, 0, 0, 0};
+
+    /* Ensure all registers are set to 0 at the beginning */
+    for (int i = 0; i < 5; ++i)
+        if (!write_register(i, 0))
+            return false;
+
+    for (int i = 0; i < TEST_WRITE_REG_READ_ALL_COUNT; ++i) {
+        int reg_address;
+
+        reg_address = rand() % 5;
+        regs[reg_address] = rand();
+
+        if (!write_register(reg_address, regs[reg_address]))
+            return false;
+
+        for (int j = 0; j < 5; ++j) {
+            char tmp = 0;
+            if (!read_register(j, &tmp))
+                return false;
+
+            if (j == 0) {
+                if ((tmp & 0x0F) != (regs[j] & 0x0F))
+                    return false;
+            } else {
+                if (tmp != regs[j])
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
  * @brief Run all tests.
  *
  * @return 0 if all tests are successful, otherwise return the first test number
@@ -189,6 +232,7 @@ int main()
     struct test tests[] = {
         {"write/read registers 1-4", test_write_read_reg_1_4},
         {"write/read register 0", test_write_read_reg_0},
+        {"write reg/read all", test_write_reg_read_all},
         {NULL, NULL}
     };
 
