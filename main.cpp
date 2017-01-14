@@ -113,10 +113,10 @@ static bool test_write_read_reg_1_4(void)
         char reg_address, value;
 
 #if TEST_WRITE_READ_REG_1_4_RANDOM
-        reg_address = rand() % 4;
+        reg_address = (rand() % 4) + 1;
         value = rand();
 #else
-        reg_address = i % 4;
+        reg_address = (i % 4) + 1;
         value = i;
 #endif
         char value_received = 0;
