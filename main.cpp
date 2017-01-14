@@ -71,6 +71,25 @@ static bool read_register(char addr, char *val)
         && i2c.read(SLAVE_ADDRESS, val, 1) == 0;
 }
 
+static bool check_all_register(char *expected_values)
+{
+    for (int i = 0; i < 5; ++i) {
+        char value = 0;
+        if (!read_register(i, &value))
+            return false;
+
+        if (i == 0) {
+            if ((value & 0x0F) != (expected_values[i] & 0x0F))
+                return false;
+        } else {
+            if (value != expected_values[i])
+                return false;
+        }
+    }
+
+    return true;
+}
+
 /**
  * @brief Write and read values to register 1-4
  *
@@ -161,19 +180,8 @@ static bool test_write_reg_read_all(void)
         if (!write_register(reg_address, regs[reg_address]))
             return false;
 
-        for (int j = 0; j < 5; ++j) {
-            char tmp = 0;
-            if (!read_register(j, &tmp))
-                return false;
-
-            if (j == 0) {
-                if ((tmp & 0x0F) != (regs[j] & 0x0F))
-                    return false;
-            } else {
-                if (tmp != regs[j])
-                    return false;
-            }
-        }
+        if (!check_all_register(regs))
+            return false;
     }
 
     return true;
@@ -215,19 +223,8 @@ static bool test_write_invalid_reg_read_all(void)
         if (!write_register(reg_address, value))
             return false;
 
-        for (int j = 0; j < 5; ++j) {
-            char tmp = 0;
-            if (!read_register(j, &tmp))
-                return false;
-
-            if (j == 0) {
-                if ((tmp & 0x0F) != (regs[j] & 0x0F))
-                    return false;
-            } else {
-                if (tmp != regs[j])
-                    return false;
-            }
-        }
+        if (!check_all_register(regs))
+            return false;
     }
 
     return true;
