@@ -11,6 +11,7 @@
  * 3. write to register 0-4 and read all the other.
  * 4. write register 5-255 and read registers 0-4
  * 5. write register 5-255 and i2c read
+ * 6. write to register 0-4 and perform multiple read
  */
 
 #include "mbed.h"
@@ -39,6 +40,9 @@ struct test {
 #define TEST_WRITE_INVALID_REG_READ_ALL_COUNT   (500)
 #define TEST_WRITE_INVALID_REG_READ_ZERO_COUNT  (500)
 #define TEST_WRITE_INVALID_REG_READ_ZERO_RANDOM (1)
+#define TEST_WRITE_REG_MULTIPLE_READ_COUNT      (100)
+#define TEST_WRITE_REG_MULTIPLE_READ_RANDOM     (1)
+#define TEST_WRITE_REG_MULTIPLE_READ_COUNT2     (5)
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -269,6 +273,42 @@ static bool test_write_invalid_reg_read_zero(void)
 }
 
 /**
+ * @brief Write to a valid register and perform multiple i2c read.
+ *
+ * If a valid register is written, any bytes sent by the PIC must be the value
+ * of this register.
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_reg_multiple_read(void)
+{
+    for (int i = 0; i < TEST_WRITE_REG_MULTIPLE_READ_COUNT; ++i) {
+        char reg_address, value;
+#if TEST_WRITE_REG_MULTIPLE_READ_RANDOM
+        reg_address = rand() % 5;
+        value = rand();
+#else
+        reg_address = i;
+        value = i;
+#endif
+
+        if(!write_register(reg_address, value))
+            return false;
+
+        char data[TEST_WRITE_REG_MULTIPLE_READ_COUNT2];
+        memset(data, 0, sizeof(data));
+        if (i2c.read(SLAVE_ADDRESS, data, sizeof(data)) != 0)
+            return false;
+
+        for (int j = 0; j < TEST_WRITE_REG_MULTIPLE_READ_COUNT2; ++j)
+            if (data[j] != value)
+                return false;
+    }
+
+    return true;
+}
+
+/**
  * @brief Run all tests.
  *
  * @return 0 if all tests are successful, otherwise return the first test number
@@ -325,6 +365,7 @@ int main()
         {"write reg/read all", test_write_reg_read_all},
         {"write invalid reg/read all", test_write_invalid_reg_read_all},
         {"write invalid reg/read zero", test_write_invalid_reg_read_zero},
+        {"write reg/multiple read", test_write_reg_multiple_read},
         {NULL, NULL}
     };
 
