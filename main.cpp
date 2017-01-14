@@ -304,9 +304,7 @@ static int run_tests(struct test *tests)
 static void flash_all_leds(void)
 {
     while (1) {
-        led1 = led2 = led3 = led4 = 1;
-        wait_ms(100);
-        led1 = led2 = led3 = led4 = 0;
+        led1 = led2 = led3 = led4 = !led1;
         wait_ms(100);
     }
 }
