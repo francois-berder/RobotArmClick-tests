@@ -7,6 +7,7 @@
  *
  * Test list:
  * 1. write/read register 1-4
+ * 2. write/read register 0
  */
 
 #include "mbed.h"
@@ -26,8 +27,10 @@ struct test {
 };
 
 /** Tests configuration */
-#define TEST_WRITE_READ_1_4_COUNT           (100)
-#define TEST_WRITE_READ_1_4_RANDOM          (1)
+#define TEST_WRITE_READ_REG_1_4_COUNT           (100)
+#define TEST_WRITE_READ_REG_1_4_RANDOM          (1)
+#define TEST_WRITE_READ_REG_0_COUNT             (10)
+#define TEST_WRITE_READ_REG_0_RANDOM            (1)
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -75,10 +78,10 @@ static bool read_register(char addr, char *val)
  */
 static bool test_write_read_reg_1_4(void)
 {
-    for (int i = 0; i < TEST_WRITE_READ_1_4_COUNT; ++i) {
+    for (int i = 0; i < TEST_WRITE_READ_REG_1_4_COUNT; ++i) {
         char reg_address, value;
 
-#ifdef TEST_WRITE_READ_1_4_RANDOM
+#if TEST_WRITE_READ_REG_1_4_RANDOM
         reg_address = rand() % 4;
         value = rand();
 #else
@@ -92,6 +95,37 @@ static bool test_write_read_reg_1_4(void)
 
         if (value != value_received) {
             fprintf(stderr, "Wrote %02X to register %d, but read %02X\n", value, reg_address, value_received);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Write and read values to register 0
+ *
+ * Only the lower half of register 0 can be written. This means that the value
+ * written can be different from the value read.
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_read_reg_0(void)
+{
+    for (int i = 0; i < TEST_WRITE_READ_REG_0_COUNT; ++i) {
+        char value;
+#if TEST_WRITE_READ_REG_0_RANDOM
+        value = rand();
+#else
+        value = i;
+#endif
+        char value_received = 0;
+        if (!write_register(0, value)
+        ||  !read_register(0, &value_received))
+            return false;
+
+        if ((value & 0x0F) != (value_received & 0x0F)) {
+            fprintf(stderr, "Wrote %02X to register 0, but read %02X\n", value & 0x0F, value_received & 0x0F);
             return false;
         }
     }
@@ -154,6 +188,7 @@ int main()
 
     struct test tests[] = {
         {"write/read registers 1-4", test_write_read_reg_1_4},
+        {"write/read register 0", test_write_read_reg_0},
         {NULL, NULL}
     };
 
@@ -167,3 +202,4 @@ int main()
 
     return 0;
 }
+
