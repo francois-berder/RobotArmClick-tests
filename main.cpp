@@ -300,9 +300,15 @@ static bool test_write_reg_multiple_read(void)
         if (i2c.read(SLAVE_ADDRESS, data, sizeof(data)) != 0)
             return false;
 
-        for (int j = 0; j < TEST_WRITE_REG_MULTIPLE_READ_COUNT2; ++j)
-            if (data[j] != value)
-                return false;
+        for (int j = 0; j < TEST_WRITE_REG_MULTIPLE_READ_COUNT2; ++j) {
+            if (reg_address == 0) {
+                if ((data[j] & 0x0F) != (value & 0x0F))
+                    return false;
+            } else {
+                if (data[j] != value)
+                    return false;
+            }
+        }
     }
 
     return true;
