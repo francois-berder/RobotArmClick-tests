@@ -10,6 +10,7 @@
  * 2. write/read register 0
  * 3. write to register 0-4 and read all the other.
  * 4. write register 5-255 and rea registers 0-4
+ * 5. write register 5-255 and i2c read
  */
 
 #include "mbed.h"
@@ -36,6 +37,8 @@ struct test {
 #define TEST_WRITE_REG_READ_ALL_COUNT           (500)
 #define TEST_WRITE_INVALID_REG_READ_ALL_RANDOM  (1)
 #define TEST_WRITE_INVALID_REG_READ_ALL_COUNT   (500)
+#define TEST_WRITE_INVALID_REG_READ_ZERO_COUNT  (500)
+#define TEST_WRITE_INVALID_REG_READ_ZERO_RANDOM (1)
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -231,6 +234,41 @@ static bool test_write_invalid_reg_read_all(void)
 }
 
 /**
+ * @Brief Write to an invalid register and perform read on I2C
+ *
+ * When writing to an invalid register is executed, any following read on the
+ * I2C bus must return zeros.
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_invalid_reg_read_zero(void)
+{
+    for (int i = 0; i < TEST_WRITE_INVALID_REG_READ_ZERO_COUNT; ++i) {
+        char reg_address, value;
+
+#if TEST_WRITE_INVALID_REG_READ_ZERO_RANDOM
+        reg_address = (rand() % 250) + 5;
+        value = rand();
+#else
+        reg_address = (i % 250) + 5;
+        value = i;
+#endif
+
+        if (!write_register(reg_address, value))
+            return false;
+
+        char value_received = 0xFF;
+        if (i2c.read(SLAVE_ADDRESS, &value_received, sizeof(value_received)) != 0)
+            return false;
+
+        if (value_received != 0)
+            return false;
+    }
+
+    return true;
+}
+
+/**
  * @brief Run all tests.
  *
  * @return 0 if all tests are successful, otherwise return the first test number
@@ -288,6 +326,7 @@ int main()
         {"write/read register 0", test_write_read_reg_0},
         {"write reg/read all", test_write_reg_read_all},
         {"write invalid reg/read all", test_write_invalid_reg_read_all},
+        {"write invalid reg/read zero", test_write_invalid_reg_read_zero},
         {NULL, NULL}
     };
 
