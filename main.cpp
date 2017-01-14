@@ -9,7 +9,7 @@
  * 1. write/read register 1-4
  * 2. write/read register 0
  * 3. write to register 0-4 and read all the other.
- * 4. write register 5-255 and rea registers 0-4
+ * 4. write register 5-255 and read registers 0-4
  * 5. write register 5-255 and i2c read
  */
 
