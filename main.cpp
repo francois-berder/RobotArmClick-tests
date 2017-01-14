@@ -236,7 +236,7 @@ static bool test_write_invalid_reg_read_all(void)
  * @return 0 if all tests are successful, otherwise return the first test number
  * (greater or equal to 1) that failed.
  */
-int run_tests(struct test *tests)
+static int run_tests(struct test *tests)
 {
     int n = 0;
 
@@ -263,7 +263,7 @@ int run_tests(struct test *tests)
  * This function is used to indicate that all tests were successfull without
  * having to look at the UART output.
  */
-void flash_all_leds(void)
+static void flash_all_leds(void)
 {
     while (1) {
         led1 = led2 = led3 = led4 = 1;
