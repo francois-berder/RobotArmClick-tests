@@ -9,6 +9,7 @@
  * 1. write/read register 1-4
  * 2. write/read register 0
  * 3. write to register 0-4 and read all the other.
+ * 4. write register 5-255 and rea registers 0-4
  */
 
 #include "mbed.h"
@@ -33,6 +34,8 @@ struct test {
 #define TEST_WRITE_READ_REG_0_COUNT             (10)
 #define TEST_WRITE_READ_REG_0_RANDOM            (1)
 #define TEST_WRITE_REG_READ_ALL_COUNT           (500)
+#define TEST_WRITE_INVALID_REG_READ_ALL_RANDOM  (1)
+#define TEST_WRITE_INVALID_REG_READ_ALL_COUNT   (500)
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -177,6 +180,60 @@ static bool test_write_reg_read_all(void)
 }
 
 /**
+ * @brief Write to an invalid register (5-255) and read register 0-4
+ *
+ * Writing to an invalid register should not change the values of register 0-4.
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_invalid_reg_read_all(void)
+{
+    char regs[5];
+
+    /* Write values to register 0-4 */
+    for (int i = 0; i < 5; ++i) {
+#if TEST_WRITE_INVALID_REG_READ_ALL_RANDOM
+        regs[i] = rand();
+#else
+        regs[i] = i;
+#endif
+        if (!write_register(i, regs[i]))
+            return false;
+    }
+
+    for (int i = 0; i < TEST_WRITE_INVALID_REG_READ_ALL_COUNT; ++i) {
+        char reg_address, value;
+
+#if TEST_WRITE_INVALID_REG_READ_ALL_RANDOM
+        reg_address = (rand() % 250) + 5;
+        value = rand();
+#else
+        reg_address = (i % 250) + 5;
+        value = i;
+#endif
+
+        if (!write_register(reg_address, value))
+            return false;
+
+        for (int j = 0; j < 5; ++j) {
+            char tmp = 0;
+            if (!read_register(j, &tmp))
+                return false;
+
+            if (j == 0) {
+                if ((tmp & 0x0F) != (regs[j] & 0x0F))
+                    return false;
+            } else {
+                if (tmp != regs[j])
+                    return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
  * @brief Run all tests.
  *
  * @return 0 if all tests are successful, otherwise return the first test number
@@ -233,6 +290,7 @@ int main()
         {"write/read registers 1-4", test_write_read_reg_1_4},
         {"write/read register 0", test_write_read_reg_0},
         {"write reg/read all", test_write_reg_read_all},
+        {"write invalid reg/read all", test_write_invalid_reg_read_all},
         {NULL, NULL}
     };
 
