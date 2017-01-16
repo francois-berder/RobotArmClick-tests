@@ -40,9 +40,8 @@ struct test {
 #define TEST_WRITE_INVALID_REG_READ_ALL_COUNT   (500)
 #define TEST_WRITE_INVALID_REG_READ_ZERO_COUNT  (500)
 #define TEST_WRITE_INVALID_REG_READ_ZERO_RANDOM (1)
-#define TEST_WRITE_REG_MULTIPLE_READ_COUNT      (100)
 #define TEST_WRITE_REG_MULTIPLE_READ_RANDOM     (1)
-#define TEST_WRITE_REG_MULTIPLE_READ_COUNT2     (5)
+
 
 /**
  * @brief Show a number in binary form using the 4 LED's present on the board.
@@ -273,43 +272,47 @@ static bool test_write_invalid_reg_read_zero(void)
 }
 
 /**
- * @brief Write to a valid register and perform multiple i2c read.
+ * @brief Check the auto-increment feature while reading.
  *
- * If a valid register is written, any bytes sent by the PIC must be the value
- * of this register.
+ * If the user starts reads 10 bytes from register 0, it must have the first
+ * 5 bytes from registers 0-4, followed by zeros
  *
  * @return True if successful, false otherwise
  */
 static bool test_write_reg_multiple_read(void)
 {
-    for (int i = 0; i < TEST_WRITE_REG_MULTIPLE_READ_COUNT; ++i) {
-        char reg_address, value;
+    char regs[5];
+
+    /* Write values to register 0-4 */
+    for (int i = 0; i < 5; ++i) {
 #if TEST_WRITE_REG_MULTIPLE_READ_RANDOM
-        reg_address = rand() % 5;
-        value = rand();
+        regs[i] = rand();
 #else
-        reg_address = i;
-        value = i;
+        regs[i] = i;
 #endif
-
-        if(!write_register(reg_address, value))
+        if (!write_register(i, regs[i]))
             return false;
+    }
 
-        char data[TEST_WRITE_REG_MULTIPLE_READ_COUNT2];
-        memset(data, 0, sizeof(data));
-        if (i2c.read(SLAVE_ADDRESS, data, sizeof(data)) != 0)
-            return false;
+    char data[10];
+    memset(data, 0, sizeof(data));
+    if (i2c.write(SLAVE_ADDRESS, data, 1) != 0      /* Reset current_reg to 0 */
+    ||  i2c.read(SLAVE_ADDRESS, data, sizeof(data)) != 0)
+        return false;
 
-        for (int j = 0; j < TEST_WRITE_REG_MULTIPLE_READ_COUNT2; ++j) {
-            if (reg_address == 0) {
-                if ((data[j] & 0x0F) != (value & 0x0F))
-                    return false;
-            } else {
-                if (data[j] != value)
-                    return false;
-            }
+    for (int i = 0; i < 5; ++i) {
+        if (i == 0) {
+            if ((data[i] & 0x0F) != (regs[i] & 0x0F))
+                return false;
+        } else {
+            if (data[i] != regs[i])
+                return false;
         }
     }
+
+    for (int i = 5; i < 10; ++i)
+        if (data[i] != 0)
+            return false;
 
     return true;
 }
