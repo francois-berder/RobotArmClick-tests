@@ -41,6 +41,7 @@ struct test {
 #define TEST_WRITE_INVALID_REG_READ_ZERO_COUNT  (500)
 #define TEST_WRITE_INVALID_REG_READ_ZERO_RANDOM (1)
 #define TEST_WRITE_REG_MULTIPLE_READ_RANDOM     (1)
+#define TEST_WRITE_MULTIPLE_REG_READ_RANDOM     (1)
 
 
 /**
@@ -318,6 +319,40 @@ static bool test_write_reg_multiple_read(void)
 }
 
 /**
+ * @brief Check the auto-increment feature while writing.
+ *
+ * If the user starts writes 10 bytes from register 0, it must set the first
+ * 5 bytes in register 0-4 and ignore the rest
+ *
+ * @return True if successful, false otherwise
+ */
+static bool test_write_multiple_reg_read(void)
+{
+    char data[11];
+
+    /*
+     * data[0]: current_reg = 0
+     * data[1:5]: values of registers 0-4
+     * data[6:10]: zeroes
+     */
+    memset(data, 0, sizeof(data));
+
+    /* Set values to register 0-4 */
+    for (int i = 1; i < 6; ++i) {
+#if TEST_WRITE_MULTIPLE_REG_READ_RANDOM
+        data[i] = rand();
+#else
+        data[i] = i;
+#endif
+    }
+
+    if (i2c.write(SLAVE_ADDRESS, data, sizeof(data)) != 0)
+        return false;
+
+    return check_all_register(&data[1]);
+}
+
+/**
  * @brief Run all tests.
  *
  * @return 0 if all tests are successful, otherwise return the first test number
@@ -375,6 +410,7 @@ int main()
         {"write invalid reg/read all", test_write_invalid_reg_read_all},
         {"write invalid reg/read zero", test_write_invalid_reg_read_zero},
         {"write reg/multiple read", test_write_reg_multiple_read},
+        {"write multiple reg/read", test_write_multiple_reg_read},
         {NULL, NULL}
     };
 
